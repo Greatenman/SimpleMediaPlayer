@@ -1,0 +1,24 @@
+gitignore
+# 构建文件
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# 日志文件
+*.log
+
+# Android Studio文件
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# 临时文件
+*.tmp
+*.temp

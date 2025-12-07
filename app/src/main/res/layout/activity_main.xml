@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#000000">  <!-- 黑色背景 -->
+
+    <!-- 1. 视频播放区域（就像ImageView） -->
+    <com.google.android.exoplayer2.ui.StyledPlayerView
+        android:id="@+id/playerView"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_margin="16dp"
+        app:use_controller="true"
+        app:resize_mode="fit" />       <!-- 视频自适应 -->
+
+    <!-- 2. 控制按钮区域 -->
+    <LinearLayout
+        style="?android:attr/buttonBarStyle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="20dp">
+
+        <Button
+            android:id="@+id/btnPlayLocal"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播本地"
+            android:layout_margin="8dp" />
+
+        <Button
+            android:id="@+id/btnPlayNetwork"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="播网络"
+            android:layout_margin="8dp" />
+
+        <Button
+            android:id="@+id/btnPause"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="暂停"
+            android:layout_margin="8dp" />
+
+        <!-- 🔥 新增：线程检查按钮 -->
+        <Button
+            android:id="@+id/btnCheckThreads"
+            style="?android:attr/buttonBarButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="查线程"
+            android:layout_margin="8dp"/>
+    </LinearLayout>
+
+    <!-- 3. 状态显示区域 -->
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="准备就绪"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_gravity="center"
+        android:layout_marginTop="20dp"/>
+
+    <!-- 4. 简单进度条 -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        style="?android:attr/progressBarStyleHorizontal"/>
+</LinearLayout>
