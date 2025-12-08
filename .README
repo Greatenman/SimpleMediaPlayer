@@ -8,3 +8,9 @@
 - 保持Day 1所有功能
 - 新增故事播放逻辑
 - 简单清晰，易于理解"
+
+新感悟：
+1. 关于mp4(.mp4)  hls(.m3u8)  dash三种视频流的一些理解:即3种MediaSource的实现
+MP4格式：：由于一次下载完播放，可以适用内存较小的情况或者本地视频，设置好合理的缓存时间来增强用户的交互意愿   ProgressiveMediaSource工厂(默认也是mp4格式)  走Mp4Extractor解析且简单的缓冲管理
+hls格式 ： 先请求内容，再选择合适的码率   HlsMediaSource工厂  复杂的ABR策略管理且分片下载和拼接
+dash格式 : 创建多个 RepresentationHolder   DashMediaSource工厂  复杂的音视频同步且精确的时钟管理
