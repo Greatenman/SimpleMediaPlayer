@@ -1,5 +1,6 @@
 package com.example.simplemediaplayer
 
+import android.app.AlertDialog
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -19,7 +20,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-//    1.声明变量
+    // Day 1常规内容
+    //    1.声明变量
     private lateinit var playerView: StyledPlayerView
     private lateinit var btnPlayLocal: Button
     private lateinit var btnPlayNetwork: Button
@@ -32,7 +34,28 @@ class MainActivity : ComponentActivity() {
     var player: ExoPlayer? = null
 
     //    3.设置计数器来切换视频
+
     private var clickCount = 0
+
+    // Day 2新增：只添加互动故事相关
+
+    // 当前故事状态
+    private var currentVideoUrl = ""
+    private var nextChoice1 = ""
+    private var nextChoice2 = ""
+    private var nextVideo1 = ""
+    private var nextVideo2 = ""
+    // 简单数据类
+    data class StoryNode(
+        val title: String,
+        val videoUrl: String,
+        val nextChoice1: String,  // 选择1的文字
+        val nextChoice2: String,  // 选择2的文字
+        val nextVideo1: String,   // 选择1跳转的视频URL
+        val nextVideo2: String,   // 选择2跳转的视频URL
+        val choiceTime: Long = 10000  // 10秒后弹出选择
+    )
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +68,9 @@ class MainActivity : ComponentActivity() {
         setupClickListeners()
 //        4.开始监控日志
         startLogging()
+
+        // Day 2：设置故事按钮
+        setupStoryButton()
     }
 
     override fun onStart() {
@@ -62,6 +88,74 @@ class MainActivity : ComponentActivity() {
         player = null
     }
 
+    private fun setupStoryButton() {
+        val btnStartStory  = findViewById<Button>(R.id.btnStartStory)
+        btnStartStory.setOnClickListener {
+            startInteractiveStory()
+        }
+    }
+
+    private fun startInteractiveStory() {
+        Log.d("DAY2", "开始互动故事")
+        tvStatus.text = "开始播放故事..."
+
+        // 故事数据：开始视频
+        val startNode = StoryNode(
+            title = "冒险开始",
+            videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+            nextChoice1 = "向左走，探索森林",
+            nextChoice2 = "向右走，前往城堡",
+            nextVideo1 = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+            nextVideo2 = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4"
+        )
+
+        // 保存状态
+        currentVideoUrl = startNode.videoUrl
+        nextChoice1 = startNode.nextChoice1
+        nextChoice2 = startNode.nextChoice2
+        nextVideo1 = startNode.nextVideo1
+        nextVideo2 = startNode.nextVideo2
+
+        // 播放开始视频
+        playVideo(startNode.videoUrl, startNode.title)
+        // ⭐ 关键：10秒后弹出选择
+        lifecycleScope.launch {
+            delay(10000)  // 等待10秒
+            showStoryChoice()
+        }
+    }
+
+    private fun playVideo(url: String, title: String) {
+        tvStatus.text = "播放: $title"
+
+        val mediaItem = MediaItem.fromUri(url)
+        player?.setMediaItem(mediaItem)
+        player?.prepare()
+        player?.play()
+    }
+
+    private fun showStoryChoice() {
+        runOnUiThread {
+            // 暂停当前视频
+            player?.pause()
+            AlertDialog.Builder(this)
+                .setTitle("请选择")
+                .setMessage("故事发展到关键点，你要怎么选择？")
+                .setPositiveButton(nextChoice1) { _, _ ->
+                    Log.d("CHOICE", "选择了: $nextChoice1")
+                    tvStatus.text = "选择了: $nextChoice1"
+                    playVideo(nextVideo1, "森林结局")
+                }
+                .setNegativeButton(nextChoice2) { _, _ ->
+                    Log.d("CHOICE", "选择了: $nextChoice2")
+                    tvStatus.text = "选择了: $nextChoice2"
+                    playVideo(nextVideo2, "城堡结局")
+                }
+                .setCancelable(false)
+                .show()
+        }
+    }
+
     private fun startLogging() {
         Log.d("LEARNING", "🎬 ========== 开始学习音视频开发 ==========")
         Log.d("LEARNING", "1. ExoPlayer版本: 2.19.1")
@@ -71,6 +165,7 @@ class MainActivity : ComponentActivity() {
         // 打印当前线程信息
         Log.d("xiancheng", "主线程: ${Thread.currentThread().name}")
     }
+
 
     private fun setupClickListeners() {
 //        按钮1：播放本地视频
@@ -199,7 +294,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
+}
 
     private fun initViews() {
         playerView = findViewById(R.id.playerView)
@@ -218,14 +313,18 @@ private fun MainActivity.startProgressUpdate() {
         while (true) {
             delay(200) // 每200ms更新一次
 
-            player?.let { p -> {
-                if (p.duration >0) {
-                    val progress = (p.currentPosition.toFloat() / p.duration * 100).toInt()
-                    runOnUiThread {
-                        progressBar.progress = progress
+            player?.let { p ->
+                {
+                    if (p.duration > 0) {
+                        val progress = (p.currentPosition.toFloat() / p.duration * 100).toInt()
+                        runOnUiThread {
+                            progressBar.progress = progress
+                        }
                     }
                 }
-            } }
+            }
         }
     }
 }
+
+
