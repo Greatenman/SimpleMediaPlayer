@@ -54,6 +54,7 @@ dependencies {
     implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")
     implementation("com.google.android.exoplayer:exoplayer-hls:2.19.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.9.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
