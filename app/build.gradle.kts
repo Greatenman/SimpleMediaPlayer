@@ -10,6 +10,10 @@ android {
         version = release(36)
     }
 
+    buildFeatures {
+        viewBinding = true
+    }
+
     defaultConfig {
         applicationId = "com.example.simplemediaplayer"
         minSdk = 24
@@ -54,6 +58,8 @@ dependencies {
     implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")
     implementation("com.google.android.exoplayer:exoplayer-hls:2.19.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.activity:activity-ktx:1.8.0")
+    implementation(libs.androidx.media3.common.ktx)  // 提供viewModels委托
     debugImplementation("com.squareup.leakcanary:leakcanary-android:2.9.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

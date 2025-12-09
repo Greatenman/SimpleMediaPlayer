@@ -4,13 +4,21 @@
 - 支持两个不同结局跳转
 - 使用delay()实现时间触发
 
-代码特点：
-- 保持Day 1所有功能
-- 新增故事播放逻辑
-- 简单清晰，易于理解"
+day3 mvvm尝试架构+部分内存缓存优化
+app/src/main/java/com/example/simplemediaplayer/
+├── MainActivity.kt
+├── di/                         # 新建：依赖注入
+├── data/                       # 新建：数据层
+│   ├── model/                  # 新建：数据模型
+│   └── cache/                  # 新建：缓存
+└── ui/                         # 新建：UI层
+    └── viewmodel/              # 新建：ViewModel
 
-新感悟：
-1. 关于mp4(.mp4)  hls(.m3u8)  dash三种视频流的一些理解:即3种MediaSource的实现
-MP4格式：：由于一次下载完播放，可以适用内存较小的情况或者本地视频，设置好合理的缓存时间来增强用户的交互意愿   ProgressiveMediaSource工厂(默认也是mp4格式)  走Mp4Extractor解析且简单的缓冲管理
-hls格式 ： 先请求内容，再选择合适的码率   HlsMediaSource工厂  复杂的ABR策略管理且分片下载和拼接
-dash格式 : 创建多个 RepresentationHolder   DashMediaSource工厂  复杂的音视频同步且精确的时钟管理
+
+缓存还未完成
+完成项目架构
+实现了在activity对exoplay的各种动作指令实现  将各种item(如状态，影音数据在model统一存储，由一个video仓库进行管理)
+在viewmodel中对ui展示进行统一操作
+在activity中对exoplay组件进行管理(由于在model中管理内存泄漏严重故而放弃)
+
+明日尝试对非首次播放的内容进行缓存，进而优化播放体验
