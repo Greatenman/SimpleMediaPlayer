@@ -6,16 +6,16 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="#000000"
-    tools:context=".MainActivity">  <!-- 黑色背景 -->
+    tools:context=".MainActivity">
 
-    <!-- 1. 视频播放区域（就像ImageView） -->
+    <!-- 1. 视频播放区域 -->
     <com.google.android.exoplayer2.ui.StyledPlayerView
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:layout_margin="16dp"
         app:use_controller="true"
-        app:resize_mode="fit" />       <!-- 视频自适应 -->
+        app:resize_mode="fit" />
 
     <!-- 2. 控制按钮区域 -->
     <LinearLayout
@@ -50,26 +50,10 @@
             android:text="暂停"
             android:layout_margin="8dp" />
 
-        <!-- 🔥 新增：线程检查按钮 -->
-        <Button
-            android:id="@+id/btnCheckThreads"
-            style="?android:attr/buttonBarButtonStyle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="查线程"
-            android:layout_margin="8dp"/>
-    </LinearLayout>
-
-    <!-- Day 2新增：互动功能区域 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginTop="10dp">
-
+        <!-- 原有故事按钮 -->
         <Button
             android:id="@+id/btnStartStory"
+            style="?android:attr/buttonBarButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="开始故事"
@@ -88,11 +72,12 @@
         android:layout_gravity="center"
         android:layout_marginTop="20dp"/>
 
-    <!-- 4. 简单进度条 -->
+    <!-- 4. 进度条 -->
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20dp"
         style="?android:attr/progressBarStyleHorizontal"/>
+
 </LinearLayout>

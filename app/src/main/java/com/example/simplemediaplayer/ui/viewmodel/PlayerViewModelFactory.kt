@@ -18,6 +18,6 @@ class PlayerViewModelFactory(private val repository: VideoRepository): ViewModel
         if (modelClass.isAssignableFrom(PlayerViewModel::class.java)) {
             return PlayerViewModel(repository) as T
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
+        throw IllegalArgumentException("未知的ViewModel类: ${modelClass.name}")
     }
 }

@@ -21,12 +21,33 @@ import com.google.android.exoplayer2.MediaItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import android.app.AlertDialog
+import android.widget.Toast
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
+import kotlin.math.log
 
-
+/**
+ * MainActivity - View层
+ *
+ * 架构讲解：
+ * 1. 单一职责：只负责UI显示和用户交互
+ * 2. 观察者模式：观察ViewModel的状态变化
+ * 3. 生命周期管理：正确初始化和释放资源
+ *
+ * Activity的职责：
+ * 1. 初始化UI组件
+ * 2. 设置事件监听器
+ * 3. 观察ViewModel状态并更新UI
+ * 4. 处理Android生命周期
+ * 5. 执行具体的UI操作（如播放视频）
+ */
 class MainActivity : ComponentActivity() {
-    // ==================== 1. 视图绑定 ====================
+    companion object {
+        private const val TAG = "MainActivity"
+    }
+    //==================== 1. 变量声明 ====================
+
+    // ViewBinding（替代findViewById）
     private lateinit var binding: ActivityMainBinding
 
     // ==================== 2. UI控件 ====================
@@ -37,20 +58,23 @@ class MainActivity : ComponentActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var progressBar: ProgressBar
     private lateinit var btnStartStory: Button
+    private lateinit var btnCacheTest: Button
 
-    // ==================== 3. 播放器 ====================
+    //播放器（Activity持有，因为与UI生命周期相关）
     private lateinit var player: ExoPlayer
 
     // ==================== 4. MVVM组件 ====================
+    // ViewModel（通过委托创建，自动管理生命周期
     private val viewModel: PlayerViewModel by viewModels {
         // 提供ViewModel的工厂，传入需要的依赖
         PlayerViewModelFactory(
             VideoRepository(this)
         )
     }
+    // 数据仓库（用于缓存操作）
+    private lateinit var repository: VideoRepository
 
-    // ==================== 5. 原有故事功能 ====================
-    // （完全保持不变）
+    // ==================== 2. 原有故事功能 ====================
     private var clickCount = 0
     private var currentVideoUrl = ""
     private var nextChoice1 = ""
@@ -68,12 +92,17 @@ class MainActivity : ComponentActivity() {
         val choiceTime: Long = 10000
     )
 
-    // ==================== 6. onCreate ====================
+    // ==================== 3. onCreate ====================
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "onCreate")
         // 工作中：使用ViewBinding更安全
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        //初始化video仓库
+        repository = VideoRepository(this)
+
         // 初始化UI
         initViews()
 
@@ -90,10 +119,24 @@ class MainActivity : ComponentActivity() {
         startLogging()
 
 
-        Log.d("MVVM", "✅ 架构初始化完成")
+        Log.d(TAG, "✅ 架构初始化完成")
     }
 
-    // ==================== 7. 初始化视图 ====================
+    override fun onStart() {
+        super.onStart()
+        Log.d(TAG,"onStart")
+        if (player == null) {
+            initPlayer()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Log.d("Lifecycle", "onStop")
+        player?.release()
+    }
+
+    // ==================== 4. 初始化视图 ====================
     private fun initViews() {
         playerView = binding.playerView
         btnPlayLocal = binding.btnPlayLocal
@@ -102,6 +145,13 @@ class MainActivity : ComponentActivity() {
         tvStatus = binding.tvStatus
         progressBar = binding.progressBar
         btnStartStory = binding.btnStartStory
+
+        // 添加缓存测试按钮
+        btnCacheTest = Button(this).apply {
+            text = "缓存测试"
+            setOnClickListener { showCacheMenu() }
+        }
+        (binding.root as? android.widget.LinearLayout)?.addView(btnCacheTest)
     }
 
     // ==================== 8. 观察ViewModel ====================
@@ -125,33 +175,40 @@ class MainActivity : ComponentActivity() {
                     "暂停"
                 }
 
-                // 工作中：可以在这里添加更多UI更新逻辑
-                // 比如：显示/隐藏加载动画
-                // 比如：更新视频标题显示
-                // 比如：处理错误状态
+                // 处理加载状态
+                if (uiState.isLoading) {
+                    // 可以显示加载动画
+                    Log.d("UI", "正在加载...")
+                }
             }
         }
     }
 
-    // ==================== 9. 点击监听 ====================
+    // ==================== 6. 点击监听 ====================
     private fun setupClickListeners() {
-
+        player?.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                updatePlayerStatus(state)
+            }
+        })
         // 按钮1：播放本地视频
         btnPlayLocal.setOnClickListener {
-            Log.d("CLICK", "点击了【播本地】")
+            Log.d(TAG, "点击了【播本地】")
             // 工作中：Activity只做两件事：
             // 1. 调用ViewModel的方法（告诉ViewModel用户做了什么）
-            viewModel.playLocalVideo("android.resource://$packageName/raw/sample")
-            // 2. 执行UI相关的操作（播放器控制）
-            try {
-                var localUri = Uri.parse("android.resource://$packageName/raw/sample")
-                mainPlayVideo(localUri,"本地视频正在播放中")
+            viewModel.playLocalVideo()
+           lifecycleScope.launch {
+               // 2. 执行UI相关的操作（播放器控制）
+               try {
+                   var localUri = Uri.parse("android.resource://$packageName/raw/sample")
+                   playVideoWithCache(localUri, "本地视频", isLocal = true)
 //                viewModel.playVideo(localUri,"本地视频正在播放中")
-                Log.d("PLAYER", "播放本地视频")
-            } catch (e: Exception) {
-                // 错误可以交给ViewModel处理
-                Log.e("ERROR", "本地视频错误: ${e.message}")
-            }
+                   Log.d(TAG, "播放本地视频")
+               } catch (e: Exception) {
+                   // 错误可以交给ViewModel处理
+                   Log.e(TAG, "本地视频错误: ${e.message}")
+               }
+           }
         }
 
         // 按钮2：播放网络视频
@@ -175,13 +232,13 @@ class MainActivity : ComponentActivity() {
             // 轮换播放（原有逻辑）
             val (url, format, desc) = videos[clickCount % videos.size]
             clickCount++
-            Log.d("myceshi", "播放 $format: ${url.take(50)}...  名字 $desc")
+            Log.d(TAG, "播放 $format: ${url.take(50)}...  名字 $desc")
             // 播放操作
             if (url.startsWith("http")) {
                 var uri = Uri.parse(url)
-                mainPlayVideo(uri,"轮换视频中")
-//                viewModel.playVideo(uri,"轮换视频中")
-
+                lifecycleScope.launch {
+                    playVideoWithCache(Uri.parse(url), desc, isLocal = false)
+                }
                 // 开始更新进度条
                 startProgressUpdate()
             }
@@ -195,6 +252,10 @@ class MainActivity : ComponentActivity() {
 
         btnPause.setOnClickListener {
             Log.d("CLICK", "点击了【暂停】")
+            val isPlaying = player?.isPlaying == true
+
+            // 通知ViewModel
+            viewModel.togglePlayPause(isPlaying)
             if (player?.isPlaying == true) {
                 player?.pause()
                 btnPause.text = "继续"
@@ -204,12 +265,53 @@ class MainActivity : ComponentActivity() {
                 player?.play()
                 btnPause.text = "暂停"
                 viewModel.updateText("播放中")
-                Log.d("myceshi", "继续播放")
+                Log.d(TAG, "继续播放")
             }
         }
     }
 
-    // ==================== 10. 播放器相关 ====================
+    // ==================== 7. 视频播放方法 ====================
+    /**
+     * 带缓存的视频播放方法
+     *
+     * 架构讲解：
+     * 1. 分离关注点：播放操作在Activity中
+     * 2. 异步处理：使用协程避免阻塞主线程
+     * 3. 降级处理：缓存失败时使用原始URI
+     */
+    private suspend fun playVideoWithCache(uri: Uri, title: String, isLocal: Boolean = false) {
+        Log.d("CACHE", "播放视频: $title (isLocal: $isLocal)")
+        try {
+            val cacheUri = repository.getCachedVideoUri(uri)
+            val finalUri = if (cacheUri.toString() != uri.toString()) {
+                Log.d("CACHE", "✅ 使用缓存播放")
+                "🎯 [缓存] $title"
+                cacheUri
+            }  else {
+                Log.d("CACHE", "🌐 无缓存，直接播放")
+                "🌐 [网络] $title"
+                uri
+            }
+            // 更新UI状态
+            viewModel.updateText("播放: $title")
+
+            // 播放视频
+            val mediaItem = MediaItem.fromUri(finalUri)
+            player?.setMediaItem(mediaItem)
+            player?.prepare()
+            player?.play()
+
+            // 更新缓存
+            viewModel.refreshCacheInfo()
+        } catch (e: Exception) {
+            Log.e(TAG, "缓存播放失败: ${e.message}")
+            // 降级：直接播放
+            mainPlayVideo(uri, title)
+        }
+
+    }
+
+
     private fun initPlayer() {
         player = ExoPlayer.Builder(this).build()
         playerView.player = player
@@ -319,6 +421,95 @@ class MainActivity : ComponentActivity() {
 
         // 打印当前线程信息
         Log.d("xiancheng", "主线程: ${Thread.currentThread().name}")
+    }
+
+    // ==================== 8. 缓存相关功能 ====================
+
+    private fun showCacheMenu() {
+        AlertDialog.Builder(this)
+            .setTitle("缓存测试")
+            .setItems(arrayOf("查看缓存信息", "清理缓存", "测试重复播放", "测试本地缓存")) { _, choiceNumber ->
+                when (choiceNumber) {
+                    0 -> showCacheInfo()
+                    1 -> clearCache()
+                    2 -> testRepeatPlay()
+                    3 -> testLocalCache()
+                }
+            }
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun showCacheInfo() {
+        val stats = repository.getCacheStats()
+        AlertDialog.Builder(this)
+            .setTitle("缓存信息")
+            .setMessage(stats)
+            .setPositiveButton("确定", null)
+            .show()
+
+        // 更新ViewModel中的缓存信息
+        viewModel.refreshCacheInfo()
+    }
+
+    private fun clearCache() {
+        repository.clearCache()
+        Toast.makeText(this, "缓存已清理", Toast.LENGTH_SHORT).show()
+        viewModel.refreshCacheInfo()
+    }
+
+    private fun testRepeatPlay() {
+        // 测试缓存效果：连续播放同一个网络视频
+        val testUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+
+        lifecycleScope.launch {
+            val uri = Uri.parse(testUrl)
+
+            // 第一次播放
+            viewModel.updateText("第一次播放（网络）")
+            playVideoWithCache(uri, "测试视频")
+
+            delay(3000) // 播放3秒
+
+            player?.pause()
+            delay(500)
+
+            // 第二次播放（应该有缓存）
+            viewModel.updateText("第二次播放（应该从缓存）")
+            playVideoWithCache(uri, "测试视频-缓存")
+        }
+    }
+
+    private fun testLocalCache() {
+        // 测试本地视频缓存
+        lifecycleScope.launch {
+            val localUri = Uri.parse("android.resource://$packageName/raw/sample")
+            viewModel.updateText("测试本地视频缓存")
+            playVideoWithCache(localUri, "本地测试视频", isLocal = true)
+        }
+    }
+
+    // ==================== 10. 辅助方法 ====================
+
+    private fun updatePlayerStatus(state: Int) {
+        runOnUiThread {
+            when(state) {
+                Player.STATE_BUFFERING -> {
+                    Log.d("PLAYER", "状态：正在缓冲")
+                    viewModel.updateText("缓冲中...")
+                }
+                Player.STATE_READY -> {
+                    Log.d("PLAYER", "状态：准备就绪")
+                }
+                Player.STATE_ENDED -> {
+                    Log.d("PLAYER", "状态：播放结束")
+                    viewModel.updateText("播放结束")
+                }
+                Player.STATE_IDLE -> {
+                    Log.d("PLAYER", "状态：空闲")
+                }
+            }
+        }
     }
 
 }
